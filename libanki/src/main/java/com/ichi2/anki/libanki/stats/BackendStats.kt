@@ -16,6 +16,7 @@
 
 package com.ichi2.anki.libanki.stats
 
+import anki.stats.TopicMastery
 import com.ichi2.anki.libanki.Collection
 
 // These take and return bytes that the frontend TypeScript code will encode/decode.
@@ -34,3 +35,12 @@ fun Collection.getGraphPreferencesRaw(): ByteArray {
 }
 
 fun Collection.setGraphPreferencesRaw(input: ByteArray): ByteArray = backend.setGraphPreferencesRaw(input)
+
+/**
+ * Read-only per-topic mastery aggregate (GRE, PRD §5 / W1). Calls the shared
+ * rslib `MasteryQuery` RPC over JNI, so the numbers come from the same engine as
+ * desktop — no Kotlin-side statistics. Read-only: never wrapped in `undoableOp`.
+ * Each requested tag matches itself AND its `::*` descendants (hierarchical),
+ * and one row is returned per requested topic, in request order.
+ */
+fun Collection.masteryQuery(topics: List<String>): List<TopicMastery> = backend.masteryQuery(topics = topics)

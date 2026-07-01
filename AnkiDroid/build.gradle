@@ -335,7 +335,13 @@ tasks.register('installGitHook', Copy) {
     }
 }
 // to run manually: `./gradlew installGitHook`
-tasks.named('preBuild').configure { dependsOn('installGitHook') }
+// Only wire the hook into the build for a normal clone. When this repo is a git
+// submodule (our GRE fork setup), `.git` is a file (a gitdir pointer), so
+// `.git/hooks` is not a real directory and the Copy task's output validation
+// fails the whole build — skip installing the hook in that case.
+if (new File(rootProject.rootDir, '.git').isDirectory()) {
+    tasks.named('preBuild').configure { dependsOn('installGitHook') }
+}
 
 // Issue 11078 - some emulators run, but run zero tests, and still report success
 tasks.register('assertNonzeroAndroidTests') {

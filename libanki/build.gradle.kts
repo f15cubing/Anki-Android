@@ -47,6 +47,12 @@ dependencies {
         testImplementation(files(rootProject.file("../Anki-Android-Backend/rsdroid-testing/build/libs/rsdroid-testing.jar")))
         testFixturesImplementation(files(rootProject.file("../Anki-Android-Backend/rsdroid/build/outputs/aar/rsdroid-release.aar")))
         testFixturesImplementation(files(rootProject.file("../Anki-Android-Backend/rsdroid-testing/build/libs/rsdroid-testing.jar")))
+        // GRE fork: the raw rsdroid-testing.jar carries no POM, so rsdroid-testing's
+        // own runtime dep (commons-exec, used by RustBackendLoader for OS detection)
+        // isn't pulled transitively like it is from the published Maven artifact.
+        // Add it by hand so local_backend host tests can load the native lib.
+        testImplementation("org.apache.commons:commons-exec:1.6.0")
+        testFixturesImplementation("org.apache.commons:commons-exec:1.6.0")
     } else {
         implementation(libs.ankiBackend.backend)
         testImplementation(libs.ankiBackend.testing)
