@@ -1617,6 +1617,10 @@ open class DeckPicker :
      */
     private fun onFinishedStartup() {
         launchCatchingTask {
+            maybeImportGreDeck(this@DeckPicker)
+            updateDeckList()
+        }
+        launchCatchingTask {
             if (!automaticSync()) {
                 BackupPromptDialog.showIfAvailable(this@DeckPicker)
             }
