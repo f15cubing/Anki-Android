@@ -1245,6 +1245,11 @@ open class DeckPicker :
                 )
                 return true
             }
+            R.id.action_gre_scorecard -> {
+                Timber.i("DeckPicker:: GRE readiness button pressed")
+                startActivity(GreScorecardFragment.getIntent(this))
+                return true
+            }
             R.id.action_model_browser_open -> {
                 Timber.i("DeckPicker:: Model browser button pressed")
                 viewModel.openManageNoteTypes()

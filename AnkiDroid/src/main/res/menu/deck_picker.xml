@@ -62,4 +62,8 @@
     <item
         android:id="@+id/action_export_collection"
         android:menuCategory="secondary" />
+    <item
+        android:id="@+id/action_gre_scorecard"
+        android:menuCategory="secondary"
+        android:title="@string/gre_scorecard_title"/>
 </menu>

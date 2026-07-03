@@ -468,5 +468,8 @@ opening the system text to speech settings fails">Failed to open text to speech 
     <string name="error_name_exists">Name already exists</string>
 
     <string comment="Shown when retrying a running action" name="already_in_progress">Already in progress</string>
+
+    <!-- GRE fork: read-only 3-score panel (Task 7) -->
+    <string name="gre_scorecard_title" translatable="false">GRE readiness</string>
 </resources>
 
