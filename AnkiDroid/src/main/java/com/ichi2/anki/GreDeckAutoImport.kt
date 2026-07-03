@@ -28,6 +28,35 @@ const val GRE_DECK_VERSION = "2026-07-03"
 
 private const val CONFIG_KEY = "gre_deck_version"
 
+// Note GUIDs are derived from a stable, rendering-independent uid (pipeline
+// build_deck). A deck bundled under the OLD content-hash scheme can't be matched
+// by GUID, so a plain re-import would duplicate the whole deck. We stamp the
+// scheme we imported under this key; on a mismatch we run the one-time cleanup
+// below before importing. (Mirrors desktop deck_autoimport.py.)
+private const val GUID_SCHEME_KEY = "gre_deck_guid_scheme"
+private const val GUID_SCHEME = "uid"
+
+// The two note types the bundled deck ships (see pipeline/build_deck.py); used to
+// identify previously-bundled notes for the one-time pre-uid cleanup.
+private val BUNDLED_NOTETYPES =
+    listOf(
+        "GRE Math Basic (leaf-tagged)",
+        "GRE Math MCQ (leaf-tagged)",
+    )
+
+/**
+ * One-time migration off the legacy content-hash GUID scheme: remove the
+ * previously-bundled notes (identified by our two note types) so the following
+ * import lays down uid-GUID cards instead of duplicating the deck. A fresh
+ * install has no such notes, so this is a harmless no-op there.
+ */
+private fun removePreUidBundledNotes(col: Collection) {
+    val noteIds = BUNDLED_NOTETYPES.flatMap { col.findNotes("note:\"$it\"") }
+    if (noteIds.isNotEmpty()) {
+        col.removeNotes(noteIds = noteIds)
+    }
+}
+
 /**
  * Performs the actual import of the GRE study deck from [apkgPath] into [col].
  *
@@ -44,6 +73,12 @@ internal fun importGreDeckIntoCollection(
     val current = col.config.get<String>(CONFIG_KEY)
     if (current == GRE_DECK_VERSION) return false
 
+    // One-time cleanup when the previously-bundled deck predates the uid GUID
+    // scheme; otherwise a GUID-mismatched re-import would duplicate the deck.
+    if (col.config.get<String>(GUID_SCHEME_KEY) != GUID_SCHEME) {
+        removePreUidBundledNotes(col)
+    }
+
     val options =
         importAnkiPackageOptions {
             mergeNotetypes = true
@@ -54,6 +89,7 @@ internal fun importGreDeckIntoCollection(
         }
     col.importAnkiPackage(apkgPath, options)
     col.config.set(CONFIG_KEY, GRE_DECK_VERSION)
+    col.config.set(GUID_SCHEME_KEY, GUID_SCHEME)
     return true
 }
 
