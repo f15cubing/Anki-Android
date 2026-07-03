@@ -23,8 +23,19 @@ import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.libanki.Collection
 import java.io.File
 
-/** Monotonically increasing version tag — bump when the deck content changes. */
-const val GRE_DECK_VERSION = "2026-07-03"
+/**
+ * Monotonically increasing version tag — bump when the deck content changes.
+ *
+ * KNOWN LIMITATION (note-type template refresh on EXISTING installs): bumping this
+ * re-triggers the import, and a FRESH install always gets the current bundled
+ * template. But the `.apkg` build is byte-deterministic (fixed note-type `mod`), so
+ * `updateNotetypes = IF_NEWER` sees the incoming note-type as "not newer" and keeps
+ * the existing template body — a pure card-*template* change (e.g. the interactive
+ * MCQ template) does NOT reach installs that already imported an earlier bundle.
+ * Refreshing the template on existing installs is a separate follow-up. (Mirrors
+ * desktop deck_autoimport.py.)
+ */
+const val GRE_DECK_VERSION = "2026-07-03b"
 
 private const val CONFIG_KEY = "gre_deck_version"
 
