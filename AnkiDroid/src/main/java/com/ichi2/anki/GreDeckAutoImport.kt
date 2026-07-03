@@ -24,7 +24,7 @@ import com.ichi2.anki.libanki.Collection
 import java.io.File
 
 /** Monotonically increasing version tag — bump when the deck content changes. */
-const val GRE_DECK_VERSION = "2026-07-02"
+const val GRE_DECK_VERSION = "2026-07-03"
 
 private const val CONFIG_KEY = "gre_deck_version"
 
