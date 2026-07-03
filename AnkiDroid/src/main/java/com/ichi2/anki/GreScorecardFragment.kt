@@ -19,7 +19,6 @@ import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.CollectionManager.withCol
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import kotlin.math.roundToInt
 
 /**
  * Read-only view of the desktop-authoritative three-score `gre_scorecard`
@@ -74,50 +73,20 @@ class GreScorecardFragment : Fragment() {
         col.addView(body("Read-only — computed on desktop, synced here."))
 
         col.addView(sectionTitle("Memory — FSRS recall"))
-        col.addView(body(fractionRange(card.memory.estimate, card.memory.low, card.memory.high, "Not enough reviews yet.")))
+        col.addView(body(card.memoryLine()))
 
         col.addView(sectionTitle("Performance — P(correct) on a new item"))
-        col.addView(
-            body(
-                if (card.performance.state == "not_available" || card.performance.estimate == null) {
-                    "Not available yet (arrives with the exam/MCQ surface)."
-                } else {
-                    fractionRange(card.performance.estimate, card.performance.low, card.performance.high, "—")
-                },
-            ),
-        )
+        col.addView(body(card.performanceLine()))
 
+        // Readiness: number + range only when the desktop gate passed; the evidence
+        // panel (reasons / confidence / coverage / best-next) is always present — a
+        // Readiness number is never shown bare (honesty ceiling).
         col.addView(sectionTitle("Readiness — projected GRE 200–990"))
-        val r = card.readiness
-        if (r.shown && r.estimate != null) {
-            col.addView(body(scoreRange(r.estimate, r.low, r.high)))
-        } else {
-            col.addView(body("Not shown yet — needs more evidence:"))
-            r.reasons.forEach { col.addView(body("  •  $it")) }
-            r.coveragePct?.let { col.addView(body("Coverage: ${pct(it)}")) }
-            r.bestNextTopic?.let { col.addView(body("Best next topic: ${leaf(it)}")) }
-        }
+        card.readinessLines().forEach { col.addView(body(it)) }
 
         col.addView(footer("Last updated: ${card.updatedAt}"))
         col.addView(footer(card.source))
     }
-
-    private fun fractionRange(
-        est: Double?,
-        lo: Double?,
-        hi: Double?,
-        emptyText: String,
-    ): String = if (est == null) emptyText else "${pct(est)}   [${pct(lo ?: est)} – ${pct(hi ?: est)}]"
-
-    private fun scoreRange(
-        est: Double,
-        lo: Double?,
-        hi: Double?,
-    ): String = "${est.roundToInt()}   [${(lo ?: est).roundToInt()} – ${(hi ?: est).roundToInt()}]"
-
-    private fun pct(v: Double) = "${(v * 100).roundToInt()}%"
-
-    private fun leaf(tag: String) = tag.substringAfterLast("::")
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 

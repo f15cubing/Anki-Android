@@ -8,6 +8,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlin.math.roundToInt
 
 /**
  * The desktop-authoritative three-score card, computed on desktop
@@ -15,9 +16,9 @@ import kotlinx.serialization.json.Json
  * `gre_scorecard`. AnkiDroid renders it **read-only** — no scoring math on device.
  *
  * Honesty ceilings mirror desktop: the three scores stay **separate** (never
- * blended), and Readiness is shown as a range only when `shown == true`; when gated
- * off it carries `reasons` + the evidence panel (coverage / confidence /
- * best-next topic) but **never a bare number**.
+ * blended), and a Readiness **number** is never shown without the full evidence
+ * panel — `readinessLines()` always appends coverage / confidence / reasons /
+ * best-next topic, whether the score is shown or gated off.
  */
 @Serializable
 data class GreScorecard(
@@ -49,6 +50,40 @@ data class GreScorecard(
         @SerialName("best_next_topic") val bestNextTopic: String? = null,
     )
 
+    /** Memory slot line: recall fraction as a range, or a "not enough reviews" note. */
+    fun memoryLine(): String = fractionRange(memory.estimate, memory.low, memory.high, "Not enough reviews yet.")
+
+    /** Performance slot line: "not available" until the exam/MCQ attempt bank exists. */
+    fun performanceLine(): String =
+        if (performance.state == "not_available" || performance.estimate == null) {
+            "Not available yet (arrives with the exam/MCQ surface)."
+        } else {
+            fractionRange(performance.estimate, performance.low, performance.high, "\u2014")
+        }
+
+    /**
+     * All Readiness display lines. **Honesty ceiling:** a Readiness *number* is never
+     * shown without the full evidence panel, so the panel fields (reasons / confidence /
+     * coverage / best-next topic) are ALWAYS appended — whether the score is shown or
+     * gated off. The number + range is the first line only when `shown` and an estimate
+     * is present; otherwise the first line states it is gated.
+     */
+    fun readinessLines(): List<String> {
+        val r = readiness
+        val out = mutableListOf<String>()
+        out +=
+            if (r.shown && r.estimate != null) {
+                scoreRange(r.estimate, r.low, r.high)
+            } else {
+                "Not shown yet — needs more evidence:"
+            }
+        r.reasons.forEach { out += "  \u2022  $it" }
+        r.confidence?.let { out += "Confidence: $it" }
+        r.coveragePct?.let { out += "Coverage: ${pct(it)}" }
+        r.bestNextTopic?.let { out += "Best next topic: ${leaf(it)}" }
+        return out
+    }
+
     companion object {
         const val CONFIG_KEY = "gre_scorecard"
 
@@ -69,3 +104,20 @@ data class GreScorecard(
             }
     }
 }
+
+private fun fractionRange(
+    est: Double?,
+    lo: Double?,
+    hi: Double?,
+    emptyText: String,
+): String = if (est == null) emptyText else "${pct(est)}   [${pct(lo ?: est)} – ${pct(hi ?: est)}]"
+
+private fun scoreRange(
+    est: Double,
+    lo: Double?,
+    hi: Double?,
+): String = "${est.roundToInt()}   [${(lo ?: est).roundToInt()} – ${(hi ?: est).roundToInt()}]"
+
+private fun pct(v: Double) = "${(v * 100).roundToInt()}%"
+
+private fun leaf(tag: String) = tag.substringAfterLast("::")

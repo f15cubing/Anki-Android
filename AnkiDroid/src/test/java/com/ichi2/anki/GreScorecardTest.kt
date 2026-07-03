@@ -59,4 +59,37 @@ class GreScorecardTest {
         assertNull(GreScorecard.parse(""))
         assertNull(GreScorecard.parse("not json at all"))
     }
+
+    @Test
+    fun shownReadinessShowsNumberWithFullEvidencePanelNeverBare() {
+        val json =
+            """
+            {"version":1,"updated_at":"t","source":"s",
+             "memory":{"estimate":0.72,"low":0.65,"high":0.79,"coverage_pct":0.8},
+             "performance":{"estimate":0.6,"low":0.5,"high":0.7},
+             "readiness":{"shown":true,"estimate":711,"low":678,"high":748,"reasons":[],
+               "coverage_pct":0.82,"confidence":"medium","best_next_topic":"topic::algebra::linear"}}
+            """.trimIndent()
+        val lines = GreScorecard.parse(json)!!.readinessLines()
+        // the number + range...
+        assertTrue("shows the score", lines.any { it.contains("711") })
+        // ...AND the full evidence panel alongside it (a bare number is an automatic fail)
+        assertTrue("confidence shown", lines.any { it.contains("Confidence") })
+        assertTrue("coverage shown", lines.any { it.contains("Coverage") })
+        assertTrue("best-next shown", lines.any { it.contains("Best next") })
+    }
+
+    @Test
+    fun gatedReadinessShowsReasonsAndNoBareNumber() {
+        val json =
+            """
+            {"version":1,"updated_at":"t","source":"s","memory":{},"performance":{},
+             "readiness":{"shown":false,"estimate":null,"reasons":["<200 graded reviews"],
+               "coverage_pct":0.0,"confidence":"low","best_next_topic":"topic::calculus::differential_single"}}
+            """.trimIndent()
+        val lines = GreScorecard.parse(json)!!.readinessLines()
+        assertTrue("states it is gated", lines.any { it.contains("Not shown yet") })
+        assertTrue("lists the reason", lines.any { it.contains("<200 graded reviews") })
+        assertFalse("no bare numeric score line", lines.any { it.trimStart().matches(Regex("\\d{3}.*")) })
+    }
 }
