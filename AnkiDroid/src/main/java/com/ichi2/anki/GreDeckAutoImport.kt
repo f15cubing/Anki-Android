@@ -58,10 +58,20 @@ private fun removePreUidBundledNotes(col: Collection) {
 }
 
 /**
+ * True only when BOTH the version and the GUID scheme are current. Gating on the
+ * scheme too means an install that already re-imported under a buggy older build
+ * (same version, stale/absent GUID scheme, possibly duplicated) still gets
+ * repaired on next launch.
+ */
+private fun isUpToDate(col: Collection): Boolean =
+    col.config.get<String>(CONFIG_KEY) == GRE_DECK_VERSION &&
+        col.config.get<String>(GUID_SCHEME_KEY) == GUID_SCHEME
+
+/**
  * Performs the actual import of the GRE study deck from [apkgPath] into [col].
  *
- * Returns `true` if the import ran, `false` if the stored version already matches
- * [GRE_DECK_VERSION] (idempotent no-op path).
+ * Returns `true` if the import ran, `false` if the deck is already up to date
+ * (version + GUID scheme both current — idempotent no-op path).
  *
  * Exposed as `internal` so host-JVM tests can call it directly with a real
  * [Collection] without needing an Android [Context].
@@ -70,8 +80,7 @@ internal fun importGreDeckIntoCollection(
     col: Collection,
     apkgPath: String,
 ): Boolean {
-    val current = col.config.get<String>(CONFIG_KEY)
-    if (current == GRE_DECK_VERSION) return false
+    if (isUpToDate(col)) return false
 
     // One-time cleanup when the previously-bundled deck predates the uid GUID
     // scheme; otherwise a GUID-mismatched re-import would duplicate the deck.
@@ -102,8 +111,7 @@ internal fun importGreDeckIntoCollection(
  * - Must be called from a coroutine; [withCol] dispatches to the correct thread.
  */
 suspend fun maybeImportGreDeck(context: Context) {
-    val current = withCol { config.get<String>(CONFIG_KEY) }
-    if (current == GRE_DECK_VERSION) return
+    if (withCol { isUpToDate(this) }) return
 
     val tmp = File.createTempFile("gre-study-deck", ".apkg", context.cacheDir)
     try {
